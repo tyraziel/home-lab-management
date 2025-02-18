@@ -1,0 +1,54 @@
+---
+- name: Update Guest VM Network to Static (netplan)
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    new_hostname: "vm-test-001"
+    ip4_gw4: "{{ ansible_facts.default_ipv4.gateway }}"
+    ip4: "{{ ansible_facts.default_ipv4.address }}/24"
+    ifname: "{{ ansible_facts.default_ipv4.alias }}"
+
+  tasks:
+    - name: Update Guest VM Hostname to {{ new_hostname }}
+      ansible.builtin.hostname:
+        name: "{{ new_hostname }}"
+
+    - name: Create the cloud-init network disable file
+      ansible.builtin.copy:
+        dest: /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          network: {config: disabled}
+
+    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}'
+      ansible.builtin.copy:
+        dest: /etc/netplan/01-static-ip.yaml
+        owner: root
+        group: root
+        mode: "0600"
+        content: |
+          network:
+            version: 2
+            ethernets:
+              {{ ifname }}:
+                dhcp4: false
+                addresses:
+                  - {{ ip4 }}
+                routes:
+                  - to: default
+                    via: {{ ip4_gw4 }}
+                nameservers:
+                  addresses:
+                    - {{ ip4_gw4 }}
+
+    - name: Apply network settings with netplan apply
+      ansible.builtin.command: netplan apply
+      changed_when: true
+
+    - name: Reboot Guest VM
+      ansible.builtin.reboot:
+        msg: "Hostname and network changes completed, rebooting"

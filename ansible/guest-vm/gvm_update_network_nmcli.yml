@@ -1,0 +1,28 @@
+---
+- name: Update Guest VM Network to Static (nmcli)
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    new_hostname: "vm-test-001"
+    ip4_gw4: "{{ ansible_facts.default_ipv4.gateway }}"
+    ip4: "{{ ansible_facts.default_ipv4.address }}/24"
+    ifname: "{{ ansible_facts.default_ipv4.alias }}"
+
+  tasks:
+    - name: Update Guest VM Hostname to {{ new_hostname }}
+      ansible.builtin.hostname:
+        name: "{{ new_hostname }}"
+
+    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}'
+      community.general.nmcli:
+        conn_name: "{{ ifname }}"
+        ifname: "{{ ifname }}"
+        ip4: "{{ ip4 }}"
+        gw4: "{{ ip4_gw4 }}"
+        state: present
+
+    - name: Reboot Guest VM
+      ansible.builtin.reboot:
+        msg: "Hostname and network changes completed, rebooting"

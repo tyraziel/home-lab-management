@@ -1,0 +1,24 @@
+---
+- name: Patch Host(s) (apt)
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    reboot: true
+
+  tasks:
+
+    - name: Update APT Packages
+      ansible.builtin.apt:
+        name: "*"
+        update_cache: true
+        state: "latest"
+      notify:
+       - Reboot Host
+
+  handlers:
+    - name: Reboot Host
+      ansible.builtin.reboot:
+        msg: "OS Patching completed, rebooting"
+        reboot_timeout: 1800

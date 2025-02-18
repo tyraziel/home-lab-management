@@ -1,0 +1,97 @@
+---
+- name: Proxmox Snapshot VM(s)
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    proxmox_cluster_host: "proxmox-cluster-host"
+    proxmox_target_node: "proxmox-node"
+    vm_guests_to_snapshot: ["vm-test-001", "vm-test-002"]
+    snapshot: "SNAPSHOT_TESTING"
+    live: false
+
+  vars_prompt:
+    - name: proxmox_api_user
+      prompt: "Proxmox API User"
+      default: "root@pam"
+      private: false
+
+    - name: proxmox_api_secret
+      prompt: "Proxmox API Secret"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Stop the VM(s)
+      community.general.proxmox_kvm:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node: "{{ proxmox_target_node }}"
+        name: "{{ item }}"
+        state: "stopped"
+        timeout: 600
+      with_items: "{{ vm_guests_to_snapshot }}"
+      register: stop_vm_results
+      async: 600
+      poll: 0
+      when: not live
+
+    - name: Wait for all VM(s) to stop
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: vm_stop_job_result
+      until: vm_stop_job_result.finished
+      retries: 300
+      delay: 5
+      with_items: "{{ stop_vm_results.results }}"
+      when: not live
+
+    - name: Snapshot the VM(s) with '{{ snapshot }}'
+      community.general.proxmox_snap:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        hostname: "{{ item }}"
+        vmstate: "{{ live }}"
+        snapname: "{{ snapshot }}"
+        state: "present"
+      with_items: "{{ vm_guests_to_snapshot }}"
+      register: snapshot_vm_results
+      async: 600
+      poll: 0
+
+    - name: Wait for all VM(s) to be snapshotted
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: vm_snapshot_job_result
+      until: vm_snapshot_job_result.finished
+      retries: 300
+      delay: 5
+      with_items: "{{ snapshot_vm_results.results }}"
+
+    - name: Start the VM(s)
+      community.general.proxmox_kvm:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node: "{{ proxmox_target_node }}"
+        name: "{{ item }}"
+        state: "started"
+        timeout: 600
+      with_items: "{{ vm_guests_to_snapshot }}"
+      register: start_vm_results
+      async: 600
+      poll: 0
+      when: not live
+
+    - name: Wait for all VM(s) to start
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: vm_start_job_result
+      until: vm_start_job_result.finished
+      retries: 300
+      delay: 5
+      with_items: "{{ start_vm_results.results }}"
+      when: not live

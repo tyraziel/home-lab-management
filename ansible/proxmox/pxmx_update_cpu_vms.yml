@@ -1,0 +1,39 @@
+---
+- name: Update CPU VM(s)
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    proxmox_cluster_host: "proxmox-cluster-host"
+    proxmox_target_node: "proxmox-node"
+    vm_guests_to_update: ["vm-test-001", "vm-test-002"]
+    sockets: 1
+    cores: 1
+
+  vars_prompt:
+    - name: proxmox_api_user
+      prompt: "Proxmox API User"
+      default: "root@pam"
+      private: false
+
+    - name: proxmox_api_secret
+      prompt: "Proxmox API Secret"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Update CPU VM(s)
+      community.general.proxmox_kvm:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node: "{{ proxmox_target_node }}"
+        name: "{{ item }}"
+        cores: "{{ cores }}"
+        sockets: "{{ sockets }}"
+        update: true
+        state: "present"
+        timeout: 600
+      with_items: "{{ vm_guests_to_update }}"
+      register: update_vm_results

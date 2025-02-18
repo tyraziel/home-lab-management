@@ -1,0 +1,43 @@
+---
+- name: Proxmox Get VM(s) State
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    proxmox_cluster_host: "proxmox-cluster-host"
+    proxmox_target_node: "proxmox-node"
+    vm_guests_to_query: ["vm-test-001", "vm-test-002"]
+
+  vars_prompt:
+    - name: proxmox_api_user
+      prompt: "Proxmox API User"
+      default: "root@pam"
+      private: false
+
+    - name: proxmox_api_secret
+      prompt: "Proxmox API Secret"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Get the VM(s) State
+      community.general.proxmox_kvm:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node: "{{ proxmox_target_node }}"
+        name: "{{ item }}"
+        state: "current"
+        timeout: 600
+      with_items: "{{ vm_guests_to_query }}"
+      register: query_vm_results
+
+    - name: Output Overall State Results
+      ansible.builtin.debug:
+        var: query_vm_results
+
+    - name: Output State of Each VM
+      ansible.builtin.debug:
+        msg: "{{ item.item }}: {{ item.status }}"
+      with_items: "{{ query_vm_results.results }}"
