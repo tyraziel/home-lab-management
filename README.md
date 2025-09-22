@@ -15,3 +15,11 @@ pip install --upgrade pip
 ```bash
 pip install ansible-core proxmoxer requests
 ```
+
+## Install ansible collections
+
+```
+ansible-galaxy collection install community.general
+ansible-galaxy collection install community.crypto
+ansible-galaxy collection install community.proxmox
+```
