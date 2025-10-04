@@ -1,0 +1,59 @@
+---
+- name: Create the Key Pair on [primary]
+  hosts: primary
+  gather_facts: false
+  become: true
+
+  vars:
+    force_key_generation: true
+
+  tasks:
+  - name: Generate SSH Key Pair
+    community.crypto.openssh_keypair:
+      type: rsa
+      size: 4096
+      comment: "generated-by-ansible"
+      force: "{{ force_key_generation }}"
+      path: '~/.ssh/id_rsa'
+    register: ssh_key
+
+  - name: Read the private key
+    ansible.builtin.slurp:
+      src: '~/.ssh/id_rsa'
+    register: private_key
+
+  - name: Make a backup of the private key
+    ansible.builtin.copy:
+      src: '~/.ssh/id_rsa'
+      remote_src: true
+      dest: '~/.ssh/id_rsa.bak'
+      mode: '0600'
+
+  - add_host:
+      name: for_the_key
+      groups: keys
+      the_public_key: "{{ ssh_key.public_key }}"
+      the_private_key: "{{ private_key.content | ansible.builtin.b64decode }}"
+
+- name: Apply the Keys to [primary] and [other]
+  hosts: primary,other
+  gather_facts: false
+  become: true
+
+  vars:
+    user: root
+    apply_private_key: true
+
+  tasks:
+  - name: Set authorized keys for host
+    ansible.posix.authorized_key:
+      user: "{{ user }}"
+      state: present
+      key: "{{ hostvars['for_the_key']['the_public_key'] }}"
+
+  - name: Copy private key to host
+    ansible.builtin.copy:
+      content: "{{ hostvars['for_the_key']['the_private_key'] }}"
+      dest: '~/.ssh/id_rsa'
+      mode: '0600'
+    when: apply_private_key

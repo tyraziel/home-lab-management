@@ -1,0 +1,16 @@
+---
+- name: Update /etc/hosts
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    adds: [{ip: "127.0.0.1", dns: ["localhost", "localhost.localdomain"]}, {ip: "192.168.0.1", dns: ["my-server", "my-server.local"]}]
+
+  tasks:
+  - name: Add to /etc/hosts
+    ansible.builtin.lineinfile:
+      path: /etc/hosts
+      line: "{{ item.ip }} {{ item.dns | join (' ') }}"
+      state: present
+    with_items: "{{ adds }}"
