@@ -1,5 +1,5 @@
 ---
-- name: Update Guest VM Network to Static (netplan)
+- name: Update Ubuntu Based Guest VM Network to Static via netplan
   hosts: all
   gather_facts: true
   become: true
@@ -8,6 +8,8 @@
     new_hostname: "vm-test-001"
     ip4_gw4: "{{ ansible_facts.default_ipv4.gateway }}"
     ip4: "{{ ansible_facts.default_ipv4.address }}/24"
+    ip4_dns4: "{{ ansible_facts.default_ipv4.gateway }}"
+    ip4_dns4_fallback: "{{ ansible_facts.default_ipv4.gateway }}"
     ifname: "{{ ansible_facts.default_ipv4.alias }}"
 
   tasks:
@@ -24,7 +26,7 @@
         content: |
           network: {config: disabled}
 
-    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}'
+    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}' and DNS '{{ ip4_dns4 | default("") }}, {{ ip4_dns4_fallback | default("") }}' with search '{{ ip4_dns4_search | default("") }}'
       ansible.builtin.copy:
         dest: /etc/netplan/01-static-ip.yaml
         owner: root
@@ -43,7 +45,10 @@
                     via: {{ ip4_gw4 }}
                 nameservers:
                   addresses:
-                    - {{ ip4_gw4 }}
+                    - {{ ip4_dns4 }}
+                    - {{ ip4_dns4_fallback }}
+                  search:
+                    - {{ ip4_dns4_search }}
 
     - name: Apply network settings with netplan apply
       ansible.builtin.command: netplan apply

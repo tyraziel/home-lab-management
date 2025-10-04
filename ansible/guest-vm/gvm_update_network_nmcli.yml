@@ -1,11 +1,14 @@
 ---
-- name: Update Guest VM Network to Static (nmcli)
+- name: Update Guest VM Network to Static via nmcli
   hosts: all
   gather_facts: true
   become: true
 
   vars:
     new_hostname: "vm-test-001"
+    ip4_dns4: "{{ ansible_facts.default_ipv4.gateway }}"
+    ip4_dns4_fallback: "{{ ansible_facts.default_ipv4.gateway }}"
+    ip4_dns4_search: "localdomain.local"
     ip4_gw4: "{{ ansible_facts.default_ipv4.gateway }}"
     ip4: "{{ ansible_facts.default_ipv4.address }}/24"
     ifname: "{{ ansible_facts.default_ipv4.alias }}"
@@ -15,12 +18,17 @@
       ansible.builtin.hostname:
         name: "{{ new_hostname }}"
 
-    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}'
+    - name: Update Guest VM Networking to Static IPv4 '{{ ifname | default("") }}':'{{ ip4 | default("") }}' with gateway '{{ ip4_gw | default("") }}' and DNS '{{ ip4_dns4 | default("") }}, {{ ip4_dns4_fallback | default("") }}' with search '{{ ip4_dns4_search | default("") }}'
       community.general.nmcli:
         conn_name: "{{ ifname }}"
         ifname: "{{ ifname }}"
         ip4: "{{ ip4 }}"
         gw4: "{{ ip4_gw4 }}"
+        dns4: 
+          - "{{ ip4_dns4 }}"
+          - "{{ ip4_dns4_fallback }}"
+        dns4_search:
+          - "{{ ip4_dns4_search }}"
         state: present
 
     - name: Reboot Guest VM
