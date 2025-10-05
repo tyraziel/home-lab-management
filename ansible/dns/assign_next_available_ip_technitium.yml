@@ -71,15 +71,15 @@
       fail_msg: "Zone Record Retrieval failed:  {{ technitium_zone_records_results.json.errorMessage | default ('NO_ERROR_MESSAGE_AVAILABLE') }}"
       success_msg: "Zone Record Retrieval succeeded!"
 
-  - name: output zone records
-    ansible.builtin.debug:
-      var: technitium_zone_records_results.json.response.records
+  # - name: output zone records
+  #   ansible.builtin.debug:
+  #     var: technitium_zone_records_results.json.response.records
 
-  - name: Output IP Addresses from only A Records
-    ansible.builtin.debug:
-      var: item.rData.ipAddress
-    with_items: "{{ technitium_zone_records_results.json.response.records }}"
-    when: item.type == 'A'
+  # - name: Output IP Addresses from only A Records
+  #   ansible.builtin.debug:
+  #     var: item.rData.ipAddress
+  #   with_items: "{{ technitium_zone_records_results.json.response.records }}"
+  #   when: item.type == 'A'
 
   - name: Create Taken IP List From Zone Records
     ansible.builtin.set_fact:
@@ -87,9 +87,9 @@
     with_items: "{{ technitium_zone_records_results.json.response.records }}"
     when: item.type == 'A'
 
-  - name: DEBUG TAKEN LIST
-    ansible.builtin.debug:
-      var: taken_ip_list
+  # - name: DEBUG TAKEN LIST
+  #   ansible.builtin.debug:
+  #     var: taken_ip_list
 
   - name: Set Theory Difference to create actual available assignable IP list
     ansible.builtin.set_fact:
@@ -101,9 +101,9 @@
       fail_msg: "No more IPs are available for assignment"
       success_msg: "Assignable IP Found!"
 
-  - name: DEBUG AVAILABLE LIST
-    ansible.builtin.debug:
-      var: available_assignable_ip_list
+  # - name: DEBUG AVAILABLE LIST
+  #   ansible.builtin.debug:
+  #     var: available_assignable_ip_list
 
   - name: Set variable for IP {{ available_assignable_ip_list[0] }}
     ansible.builtin.set_fact:
@@ -114,9 +114,9 @@
       url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/records/add?token={{ technitium_login_results.json.token }}&zone={{ technitium_a_record_zone }}&domain={{ technitium_a_record_hostname }}.{{ technitium_a_record_zone }}&ipAddress={{ the_ip }}&type=A&ttl={{ technitium_a_record_ttl }}&comments={{ technitium_a_record_comments | urlencode }}&ptr={{ technitium_a_record_create_ptr }}&createPtrZone={{ technitium_a_record_create_ptr_zone }}&overwrite={{ technitium_a_record_overwrite }}"
     register: technitium_a_record_creation_results
 
-  - name: Output 'A' Record Creation
-    ansible.builtin.debug:
-      var: technitium_a_record_creation_results
+  # - name: Output 'A' Record Creation
+  #   ansible.builtin.debug:
+  #     var: technitium_a_record_creation_results
 
   - name: Validate 'A' Record Creation
     ansible.builtin.assert:
