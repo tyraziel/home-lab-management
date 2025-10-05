@@ -8,6 +8,7 @@
     new_hostname: "vm-test-001"
     ip4_gw4: "{{ ansible_facts.default_ipv4.gateway }}"
     ip4: "{{ ansible_facts.default_ipv4.address }}/24"
+    ip4_dns4_search: "localdomain.local"
     ip4_dns4: "{{ ansible_facts.default_ipv4.gateway }}"
     ip4_dns4_fallback: "{{ ansible_facts.default_ipv4.gateway }}"
     ifname: "{{ ansible_facts.default_ipv4.alias }}"
