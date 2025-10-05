@@ -1,0 +1,109 @@
+# ------------------------------------------------------------------------
+# AIA (AI-Assisted Authoring) Statement:
+# Portions of this playbook were co-authored with OpenAI's GPT-5 (ChatGPT).
+# Used for syntactic refinement and automation pattern verification.
+# All logic reviewed and validated by the human operator (Andrew Potozniak).
+#
+# AIA Ph CeNc Hin R OpenAI's GPT-5 (ChatGPT) v1.0 
+# https://aiattribution.github.io/statements/AIA-Ph-CeNc-Hin-R-?model=OpenAI%27s%20GPT%252D5%20(ChatGPT)-v1.0
+# ------------------------------------------------------------------------
+---
+- name: Assign Next Available IP Address in Zone Technitium DNS Server
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    technitium_api_host: "127.0.0.1"
+    technitium_api_port: "5380"
+    technitium_user: "admin"
+    technitium_a_record_zone: "localdomain.local"
+    technitium_a_record_hostname: "technitium-dns"
+    technitium_a_record_ttl: 120 
+    technitium_a_record_comments: "Autoassigned IP Address"
+    technitium_a_record_create_ptr: true
+    technitium_a_record_create_ptr_zone: true
+    technitium_a_record_overwrite: false
+
+    assignable_ip_range_slash_24_network_id: "127.0.0"
+    assignable_ip_range_slash_24_host_id_start: 1
+    assignable_ip_range_slash_24_host_id_end: 100
+    assignable_ip_list: []
+
+  vars_prompt:
+    - name: technitium_admin_password
+      prompt: "Technitium Admin Password"
+      unsafe: true
+      private: true
+      confirm: true
+
+  # https://github.com/TechnitiumSoftware/DnsServer/blob/master/APIDOCS.md
+  tasks:
+
+  # AI Contribution Start
+  - name: Create list of "Assignable" IPs
+    ansible.builtin.set_fact:
+      assignable_ip_list: "{{ query('sequence', 'start=' ~ assignable_ip_range_slash_24_host_id_start ~ ' end=' ~ assignable_ip_range_slash_24_host_id_end) | map('int') | map('regex_replace', '^(.*)$', assignable_ip_range_slash_24_network_id ~ '.\\1') | list }}"
+
+  # - ansible.builtin.debug:
+  #     var: assignable_ip_list
+  # AI Contribution End
+
+  - name: Login for {{ technitium_user }}
+    ansible.builtin.uri:
+      url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_admin_password }}&includeInfo=true"
+    register: technitium_login_results
+
+  - name: Validate Login
+    ansible.builtin.assert:
+      that: technitium_login_results.json.status == "ok"
+      fail_msg: "Login with defaults failed:  {{ technitium_login_results.json.errorMessage | default ('NO_ERROR_MESSAGE_AVAILABLE') }}"
+      success_msg: "Login succeeded!"
+
+  - name: Get IPs in Zone {{ technitium_a_record_zone }}
+    ansible.builtin.uri:
+      url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/records/get?token={{ technitium_login_results.json.token }}&domain=all&zone={{ technitium_a_record_zone }}&listZone=true"
+    register: technitium_zone_records_results
+
+  - name: Validate Zone Record Retrieval
+    ansible.builtin.assert:
+      that: technitium_zone_records_results.json.status == "ok"
+      fail_msg: "Zone Record Retrieval failed:  {{ technitium_zone_records_results.json.errorMessage | default ('NO_ERROR_MESSAGE_AVAILABLE') }}"
+      success_msg: "Zone Record Retrieval succeeded!"
+
+  - name: output zone records
+    ansible.builtin.debug:
+      var: technitium_zone_records_results.json.response.records
+
+  - name: test
+    ansible.builtin.debug:
+      var: item.rData
+    with_items: "{{ technitium_zone_records_results.json.response.records }}"
+
+# Get IPs from DNS
+# 
+
+# Set Theory to figure out what the available IP addresses are and use the next one
+
+# 
+
+### Sample Response
+# {
+# 	"response": {
+# 		"zone": {
+# 			"name": "example.com",
+# 			"type": "Primary",
+# 			"internal": false,
+# 			"dnssecStatus": "SignedWithNSEC3",
+# 			"disabled": false
+# 		},
+# 		"records": [
+# 			{
+# 				"disabled": false,
+# 				"name": "example.com",
+# 				"type": "A",
+# 				"ttl": 3600,
+# 				"rData": {
+# 					"ipAddress": "1.1.1.1"
+# 				},
+# 				"dnssecStatus": "Unknown"
+# 			},
