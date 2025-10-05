@@ -26,7 +26,7 @@
         api_user: "{{ proxmox_api_user }}"
         api_password: "{{ proxmox_api_secret }}"
         api_host: "{{ proxmox_cluster_host }}"
-        node: "{{ proxmox_target_node }}"
+#        node: "{{ proxmox_target_node }}"
         name: "{{ item }}"
         state: "started"
         timeout: 600
