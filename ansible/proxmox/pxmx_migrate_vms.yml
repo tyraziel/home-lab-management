@@ -1,0 +1,48 @@
+---
+- name: Proxmox Migrate VM(s) to Target Node
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    proxmox_cluster_host: "proxmox-cluster-host"
+    proxmox_target_node: "proxmox-target-node"
+
+    vm_guests_to_migrate: [{hostname: "vm-test-001", vmid: 800}, {hostname: "vm-test-002", vmid: 801}]
+
+  vars_prompt:
+    - name: proxmox_api_user
+      prompt: "Proxmox API User"
+      default: "root@pam"
+      private: false
+
+    - name: proxmox_api_secret
+      prompt: "Proxmox API Secret"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Async Migrate VM(s)
+      community.general.proxmox_kvm:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node: "{{ proxmox_target_node }}"
+        name: "{{ item.hostname }}"
+        vmid: "{{ item.vmid }}"
+        migrate: true
+        migrate_speed: 0
+        timeout: 5000
+      with_items: "{{ vm_guests_to_migrate }}"
+      register: migrate_vm_results
+      async: 600
+      poll: 0
+
+    - name: Wait for all VM(s) to finish migrating
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: vm_migrate_job_result
+      until: vm_migrate_job_result.finished
+      retries: 1000
+      delay: 5
+      with_items: "{{ migrate_vm_results.results }}"

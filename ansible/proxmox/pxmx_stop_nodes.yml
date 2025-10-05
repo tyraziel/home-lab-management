@@ -1,0 +1,42 @@
+---
+- name: Proxmox Stop VM(s)
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    proxmox_cluster_host: "proxmox-cluster-host"
+    nodes_to_stop: ["proxmox-node2", "proxmox-node1"]
+
+  vars_prompt:
+    - name: proxmox_api_user
+      prompt: "Proxmox API User"
+      default: "root@pam"
+      private: false
+
+    - name: proxmox_api_secret
+      prompt: "Proxmox API Secret"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Stop a Proxmox VE Node
+      community.proxmox.proxmox_node:
+        api_user: "{{ proxmox_api_user }}"
+        api_password: "{{ proxmox_api_secret }}"
+        api_host: "{{ proxmox_cluster_host }}"
+        node_name: "{{ item }}"
+        power_state: offline
+      with_items: "{{ nodes_to_stop }}"
+      register: stop_node_results
+      async: 600
+      poll: 0
+
+    - name: Wait for all Node(s) to stop
+      ansible.builtin.async_status:
+        jid: "{{ item.ansible_job_id }}"
+      register: node_stop_job_result
+      until: node_stop_job_result.finished
+      retries: 300
+      delay: 5
+      with_items: "{{ stop_node_results.results }}"
