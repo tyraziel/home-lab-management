@@ -1,0 +1,9 @@
+---
+- name: "Simple Ping Test for Linux Based Systems"
+  hosts: all
+  gather_facts: false
+
+  tasks:
+
+    - name: Ping the New Server
+      ansible.builtin.ping:
