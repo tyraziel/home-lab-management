@@ -1,5 +1,3 @@
-
-
 ## Examples:
 ansible-playbook pxmx_create_vms_from_template.yml --extra-vars='{"proxmox_cluster_host":"proxmox-cluster-host", "proxmox_target_node":"proxmox-target-node", "proxmox_node_storage":"proxmox-node-storage", "template":"image-base", "vm_guests_to_create": [{"hostname": "vm-test-001", vmid: 101}, {"hostname": "vm-test-002", "vmid": 102}]}'
 
