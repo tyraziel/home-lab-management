@@ -3,3 +3,5 @@
 **/.terraform.*
 **/*.tfstate*
 **/*.inventory
+**/downloaded_iso_path
+**/*.iso
