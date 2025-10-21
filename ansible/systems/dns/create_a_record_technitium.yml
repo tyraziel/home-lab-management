@@ -1,0 +1,55 @@
+---
+- name: Create 'A' Record Technitium DNS Server
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    technitium_api_host: "127.0.0.1"
+    technitium_api_port: "5380"
+    technitium_user: "admin"
+    technitium_a_record_zone: "localdomain.local"
+    technitium_a_record_hostname: "technitium-dns"
+    technitium_a_record_ip: "127.0.0.1"
+    technitium_a_record_ttl: 120 
+    #3600 - 1 hour for core services like DNS host
+    #300 - 5 minutes, 120 - 2 minutes - homelab things
+    #86400 - 1 day for core infrastructure things like proxmox node / router
+    technitium_a_record_comments: "Test Comment"
+    technitium_a_record_create_ptr: true
+    technitium_a_record_create_ptr_zone: true
+    technitium_a_record_overwrite: false
+
+  vars_prompt:
+    - name: technitium_admin_password
+      prompt: "Technitium Admin Password"
+      unsafe: true
+      private: true
+      confirm: true
+
+  # https://github.com/TechnitiumSoftware/DnsServer/blob/master/APIDOCS.md
+  tasks:
+    - name: Login for {{ technitium_user }}
+      ansible.builtin.uri:
+        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_admin_password }}&includeInfo=true"
+      register: technitium_login_results
+
+    - name: Validate Login
+      ansible.builtin.assert:
+        that: technitium_login_results.json.status == "ok"
+        fail_msg: "Login with defaults failed:  {{ technitium_login_results.json.errorMessage | default ('NO_ERROR_MESSAGE_AVAILABLE') }}"
+        success_msg: "Login succeeded!"
+
+    - name: "Create 'A' Record '{{ technitium_a_record_hostname }}' -> '{{ technitium_a_record_ip }}' (with reverse record PTR and reverse zone for reverse record) in {{ technitium_a_record_zone }}"
+      ansible.builtin.uri:
+        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/records/add?token={{ technitium_login_results.json.token }}&zone={{ technitium_a_record_zone }}&domain={{ technitium_a_record_hostname }}.{{ technitium_a_record_zone }}&ipAddress={{ technitium_a_record_ip }}&type=A&ttl={{ technitium_a_record_ttl }}&comments={{ technitium_a_record_comments | urlencode }}&ptr={{ technitium_a_record_create_ptr }}&createPtrZone={{ technitium_a_record_create_ptr_zone }}&overwrite={{ technitium_a_record_overwrite }}"
+      register: technitium_a_record_creation_results
+
+    - name: Output 'A' Record Creation
+      ansible.builtin.debug:
+        var: technitium_a_record_creation_results
+
+    - name: Validate 'A' Record Creation
+      ansible.builtin.assert:
+        that: technitium_a_record_creation_results.json.status == "ok"
+        fail_msg: "'A' Record Creation failed:  {{ technitium_a_record_creation_results.json.errorMessage | default ('NO_ERROR_MESSAGE_AVAILABLE') }}"
+        success_msg: "'A' Record Creation succeeded!"
