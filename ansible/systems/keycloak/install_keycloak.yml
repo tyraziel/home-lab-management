@@ -1,0 +1,112 @@
+---
+- name: Install Keycloak 
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    keycloak_version: "26.4.1"
+
+  vars_prompt:
+    - name: keycloak_admin
+      prompt: "Keycloak Admin"
+      default: "keycloakadmin"
+      private: no
+
+    - name: keycloak_admin_password
+      prompt: "Keycloak Admin Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+  tasks:
+    - name: Create "keycloak" group
+      ansible.builtin.group:
+        name: keycloak
+        state: present
+
+    - name: Add 'keycloak' user
+      ansible.builtin.user:
+        name: keycloak
+        shell: /bin/bash
+        groups: keycloak
+        append: yes
+
+    - name: Install unzip and OpenJDK 21
+      ansible.builtin.apt:
+        name: unzip, openjdk-21-jdk
+        state: present
+
+    - name: "Get the keycloak installer zip for {{ keycloak_version }} - https://github.com/keycloak/keycloak/releases/download/{{ keycloak_version }}/keycloak-{{ keycloak_version}}.zip as /opt/keycloak-{{ keycloak_version }}.zip"
+      ansible.builtin.get_url:
+        url: "https://github.com/keycloak/keycloak/releases/download/{{ keycloak_version }}/keycloak-{{ keycloak_version}}.zip"
+        dest: "/opt/keycloak-{{ keycloak_version }}.zip"
+        mode: 0755
+
+    - name: Extract /opt/keycloak-{{ keycloak_version }}.zip into /opt/keycloak-{{ keycloak_version }}/
+      ansible.builtin.unarchive:
+        src: "/opt/keycloak-{{ keycloak_version }}.zip"
+        remote_src: true
+        dest: "/opt/"
+        owner: keycloak
+        group: keycloak
+
+    - name: Create Unit File for keycloak
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/keycloak.service
+        content: |
+          [Unit]
+          Description=Keycloak Identity and Access Management
+          Wants=network.target
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=keycloak
+          Group=keycloak
+          ExecStart=/opt/keycloak-{{ keycloak_version }}/bin/kc.sh start-dev
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start service keycloak.service, also issue daemon-reload to pick up config changes
+      ansible.builtin.systemd_service:
+        state: started
+        daemon_reload: true
+        enabled: true
+        name: keycloak.service
+
+    - name: Wait for keycloak to be live on 8080 on {{ inventory_hostname }}
+      ansible.builtin.wait_for:
+        port: 8080
+        host: "{{ inventory_hostname }}"
+        state: started
+        delay: 0
+        timeout: 120
+
+    - name: Stop service keycloak.service
+      ansible.builtin.systemd_service:
+        state: stopped
+        name: keycloak.service
+
+    - name: Bootstrap admin account {{ keycloak_admin }}
+      ansible.builtin.shell: KEYCLOAK_ADMIN_PASS='{{ keycloak_admin_password }}' /opt/keycloak-{{ keycloak_version }}/bin/kc.sh bootstrap-admin user --username {{ keycloak_admin }} --password:env KEYCLOAK_ADMIN_PASS
+
+    - name: Start service keycloak.service
+      ansible.builtin.systemd_service:
+        state: started
+        name: keycloak.service
+
+    - name: Wait for keycloak to be live on 8080 on {{ inventory_hostname }}
+      ansible.builtin.wait_for:
+        port: 8080
+        host: "{{ inventory_hostname }}"
+        state: started
+        delay: 0
+        timeout: 120
+
+#
+# https://www.deployhq.com/blog/simplifying-authentication-a-comprehensive-guide-to-installing-keycloak-on-a-vps
+#
+# https://www.keycloak.org/server/bootstrap-admin-recovery
