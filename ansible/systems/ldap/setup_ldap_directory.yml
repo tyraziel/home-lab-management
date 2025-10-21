@@ -1,0 +1,342 @@
+#Note that this will store the passwords for the users as base64 encoding.
+#It is therefore advisable to use passwords specific for this home lab environment and not use
+#something that protects other information.
+
+#One could leverage SSHA password protection from the ldap host command line: 
+#  slappasswd -h {SHA} -s yourPassword123
+#But then the password will be on the history.
+
+---
+- name: "Setup LDAP Environment"
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    ldap_url: "ldap://[host_ip]:389"
+    ldap_base_dn: dc=homelab,dc=local
+    email_base: "user-one"
+    email_postfix: "@homelab.local"
+    primary_user: "user-one"
+    primary_user_first_name: "User"
+    primary_user_last_name: "One"
+
+  vars_prompt:
+    - name: ldap_admin
+      prompt: "LDAP Admin Bind DN"
+      default: "cn=admin,{{ ldap_base_dn }}"
+      private: no
+
+    - name: ldap_password
+      prompt: "LDAP Admin Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+    - name: ldap_primary_user_password
+      prompt: "LDAP Primary User Default Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+    - name: ldap_test_user_password
+      prompt: "LDAP Test User Default Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+    - name: ldap_robot_user_password
+      prompt: "LDAP Robot User Default Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+    - name: ldap_bind_password
+      prompt: "LDAP Bind Default Password"
+      private: yes
+      unsafe: yes
+      confirm: yes
+
+  tasks:
+    - name: "Make sure we have the Organizational Unit DN for People - ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "ou=people,{{ ldap_base_dn }}"
+        objectClass: 
+          - organizationalUnit
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: "Make sure we have the Organizational Unit DN for Bind Accounts - ou=bind,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "ou=bind,{{ ldap_base_dn }}"
+        objectClass: 
+          - organizationalUnit
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: "Create LDAP Bind User ldapbind - cn=ldapbind,ou=bind,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=ldapbind,ou=bind,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: item
+          uid: item
+          sn: LDAPBind
+          mail: "{{ email_base }}+ldapbind{{ email_postfix }}"
+          givenName: ldapbind
+          userPassword: "{{ ldap_bind_password }}"
+          uidNumber: 10050000
+          gidNumber: 10000000
+          homeDirectory: "/home/ldapbind"
+          loginShell: /bin/bash
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Make sure we have the Organizational Unit DN for Robot Accounts - ou=robot,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "ou=robot,{{ ldap_base_dn }}"
+        objectClass: 
+          - organizationalUnit
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: "Make sure we have the Organizational Unit DN for Groups - ou=groups,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "ou=groups,{{ ldap_base_dn }}"
+        objectClass: 
+          - organizationalUnit
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: "Create User {{ primary_user }} - cn={{ primary_user }},ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn={{ primary_user }},ou=people,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: "{{ primary_user }}"
+          uid: "{{ primary_user }}"
+          sn: "{{ primary_user_last_name }}"
+          mail: "{{ email_base }}{{ email_postfix }}"
+          givenName: "{{ primary_user_first_name}}"
+          userPassword: "{{ ldap_primary_user_password }}"
+          uidNumber: 1000000
+          gidNumber: 10000000
+          homeDirectory: "/home/{{ primary_user }}"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+    
+    - name: "Create User test1 - cn=test1,ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=test1,ou=people,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: test1
+          uid: test1
+          sn: Testing
+          mail: "{{ email_base }}+test1{{ email_postfix }}"
+          givenName: test1
+          userPassword: "{{ ldap_test_user_password }}"
+          uidNumber: 1000001
+          gidNumber: 10000000
+          homeDirectory: "/home/test1"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Create User test2 - cn=test1,ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=test2,ou=people,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: test2
+          uid: test2
+          sn: Testing
+          mail: "{{ email_base }}+test2{{ email_postfix }}"
+          givenName: test2
+          userPassword: "{{ ldap_test_user_password }}"
+          uidNumber: 1000002
+          gidNumber: 10000000
+          homeDirectory: "/home/test2"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Create User test3 - cn=test3,ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=test3,ou=people,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: test3
+          uid: test3
+          sn: Testing
+          mail: "{{ email_base }}+test3{{ email_postfix }}"
+          givenName: test3
+          userPassword: "{{ ldap_test_user_password }}"
+          uidNumber: 1000003
+          gidNumber: 10000000
+          homeDirectory: "/home/test3"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Create User test4 - cn=test1,ou=people,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=test4,ou=people,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: test4
+          uid: test4
+          sn: Testing
+          mail: "{{ email_base }}+test4{{ email_postfix }}"
+          givenName: test4
+          userPassword: "{{ ldap_test_user_password }}"
+          uidNumber: 1000004
+          gidNumber: 10000000
+          homeDirectory: "/home/test4"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Create Robot User robot1 - cn=robot1,ou=robot,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=robot1,ou=robot,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: robot1
+          uid: robot1
+          sn: Robot
+          mail: "{{ email_base }}+robot1{{ email_postfix }}"
+          givenName: robot1
+          userPassword: "{{ ldap_robot_user_password }}"
+          uidNumber: 1000101
+          gidNumber: 10000000
+          homeDirectory: "/home/robot1"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: "Create Robot User robot2 - cn=robot2,ou=robot,{{ ldap_base_dn }}"
+      community.general.ldap_entry:
+        dn: "cn=robot2,ou=robot,{{ ldap_base_dn }}"
+        objectClass:
+          - inetOrgPerson
+          - posixAccount
+          - organizationalPerson
+          - person
+        attributes:
+          cn: robot2
+          uid: robot2
+          sn: Robot
+          mail: "{{ email_base }}+robot2{{ email_postfix }}"
+          givenName: robot2
+          userPassword: "{{ ldap_robot_user_password }}"
+          uidNumber: 1000102
+          gidNumber: 10000000
+          homeDirectory: "/home/robot2"
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+        state: present
+
+    - name: Create Default Group for all Users (OpenLDAP with Unix/Posix thing - posixGroup)
+      community.general.ldap_entry:
+        dn: cn=AllUsers,ou=groups,{{ ldap_base_dn }}
+        objectClass:
+          - posixGroup
+        attributes:
+          cn: AllUsers
+          memberUid: ["{{ primary_user }}", "test1", "test2", "test3", "test4"]
+          gidNumber: 10000000
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: Create Default Group for all Robot Accounts (OpenLDAP with Unix/Posix thing - posixGroup)
+      community.general.ldap_entry:
+        dn: cn=RobotAccounts,ou=groups,{{ ldap_base_dn }}
+        objectClass:
+          - posixGroup
+        attributes:
+          cn: RobotAccounts
+          memberUid: ["robot1", "robot2"]
+          gidNumber: 10000001
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: Create Test Group for Posix Group (OpenLDAP with Unix/Posix thing - posixGroup)
+      community.general.ldap_entry:
+        dn: cn=TestPosixGroup,ou=groups,{{ ldap_base_dn }}
+        objectClass:
+          - posixGroup
+        attributes:
+          cn: TestPosixGroup
+          memberUid: ["{{ primary_user }}"]
+          gidNumber: 10000002
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: Create Test Group for Group Of Names (groupOfNames)
+      community.general.ldap_entry:
+        dn: cn=GroupOfNames,ou=groups,{{ ldap_base_dn }}
+        objectClass:
+          - groupOfNames
+        attributes:
+          cn: GroupOfNames
+          member: ["cn={{ primary_user }},ou=people,{{ ldap_base_dn }}", "cn=test1,ou=people,{{ ldap_base_dn }}", "cn=test3,ou=people,{{ ldap_base_dn }}"]
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"
+
+    - name: Create Test Group for Group Of Unique Names (groupOfUniqueNames)
+      community.general.ldap_entry:
+        dn: cn=GroupOfUniqueNames,ou=groups,{{ ldap_base_dn }}
+        objectClass:
+          - groupOfUniqueNames
+        attributes:
+          cn: GroupOfUniqueNames
+          uniqueMember: ["cn={{ primary_user }},ou=people,{{ ldap_base_dn }}", "cn=test2,ou=people,{{ ldap_base_dn }}", "cn=test4,ou=people,{{ ldap_base_dn }}"]
+        server_uri: "{{ ldap_url }}"
+        bind_dn: "{{ ldap_admin }}"
+        bind_pw: "{{ ldap_password }}"

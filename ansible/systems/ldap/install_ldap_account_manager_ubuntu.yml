@@ -1,0 +1,90 @@
+# https://computingforgeeks.com/install-and-configure-ldap-account-manager-on-ubuntu/
+
+# ldap account manager is available on http port 80 via http://<server>/lam
+# Config File:
+# /var/lib/ldap-account-manager/config/lam.conf
+# Config Location: (sym links to the above)
+# /usr/share/ldap-account-manager/
+
+---
+- name: Install LDAP Account Manager
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    ldap_base_dn: dc=homelab,dc=local
+
+  tasks:
+    - name: Install LAM - LDAP Account Manager Dependencies
+      ansible.builtin.apt:
+        name: apache2, php, php-cgi, libapache2-mod-php, php-mbstring, php-common, php-pear
+        state: present
+
+    - name: Enable php8.1-cgi apache2 module for LDAP Account Manager
+      community.general.apache2_module:
+        name: php8.1-cgi
+        state: present
+
+    - name: Reload service apache2
+      ansible.builtin.systemd:
+        name: apache2
+        state: reloaded
+
+    - name: Install LAM - LDAP Account Manager
+      ansible.builtin.apt:
+        name: ldap-account-manager
+        state: present
+
+    #Admins: cn=Manager,dc=my-domain,dc=com
+    - name: Configure LAM admins
+      ansible.builtin.lineinfile:
+        path: /var/lib/ldap-account-manager/config/lam.conf
+        regexp: '^Admins: cn'
+        line: 'Admins: cn=admin,{{ ldap_base_dn }}'
+        state: present
+        backup: yes
+
+    #tools: treeViewSuffix: dc=yourdomain,dc=org
+    - name: Configure LAM tools treeViewSuffix
+      ansible.builtin.lineinfile:
+        path: /var/lib/ldap-account-manager/config/lam.conf
+        regexp: '^tools: treeViewSuffix'
+        line: 'tools: treeViewSuffix: {{ ldap_base_dn }}'
+        state: present
+        backup: yes
+
+    #defaultLanguage: en_GB.utf8
+    - name: Configure LAM defaultLanguage
+      ansible.builtin.lineinfile:
+        path: /var/lib/ldap-account-manager/config/lam.conf
+        regexp: '^defaultLanguage: '
+        line: 'defaultLanguage: en_US.utf8'
+        state: present
+        backup: yes
+
+    #types: suffix_user: ou=People,dc=my-domain,dc=com
+    - name: Configure LAM types suffix_user
+      ansible.builtin.lineinfile:
+        path: /var/lib/ldap-account-manager/config/lam.conf
+        regexp: '^types: suffix_user'
+        line: 'types: suffix_user: {{ ldap_base_dn }}'
+        #line: 'types: suffix_user: ou=people,{{ ldap_base_dn }}'
+        state: present
+        backup: yes
+
+    #types: suffix_group: ou=group,dc=my-domain,dc=com
+    - name: Configure LAM types suffix_group
+      ansible.builtin.lineinfile:
+        path: /var/lib/ldap-account-manager/config/lam.conf
+        regexp: '^types: suffix_group'
+        #line: 'types: suffix_group: ou=groups,{{ ldap_base_dn }}'
+        line: 'types: suffix_group: {{ ldap_base_dn }}'
+        state: present
+        backup: yes
+
+    - name: Restart service apache2
+      ansible.builtin.systemd:
+        name: apache2
+        state: restarted
+        daemon_reload: yes

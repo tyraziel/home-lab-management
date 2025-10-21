@@ -1,0 +1,47 @@
+#https://computingforgeeks.com/install-and-configure-openldap-server-ubuntu/
+
+---
+- name: Install OpenLDAP Server
+  hosts: all
+  gather_facts: false
+  become: true
+
+  vars:
+    ldap_domain: homelab.local
+    # organization is an older concept
+    # ldap_organization: org
+
+  vars_prompt:
+    - name: slapd_admin_password
+      prompt: "slapd Admin Password"
+      unsafe: true
+      private: true
+      confirm: true
+
+  tasks:
+    - name: Install packages
+      ansible.builtin.apt:
+        name: debconf-utils
+        state: present
+
+    - name: Install slapd and ldap-utils
+      ansible.builtin.shell: echo 'slapd/root_password password {{ slapd_admin_password }}' | debconf-set-selections && echo 'slapd/root_password_again password {{ slapd_admin_password }}' | debconf-set-selections && DEBIAN_FRONTEND=noninteractive apt-get install -y slapd ldap-utils
+
+    - name: Reconfigure slapd
+      ansible.builtin.shell: echo "slapd slapd/no_configuration boolean false" | debconf-set-selections && echo "slapd slapd/domain string {{ ldap_domain }}" | debconf-set-selections && echo "slapd slapd/password1 password {{ slapd_admin_password }}" | debconf-set-selections && echo "slapd slapd/password2 password {{ slapd_admin_password }}" | debconf-set-selections && echo "slapd slapd/purge_database boolean false" | debconf-set-selections && echo "slapd slapd/allow_ldap_v2 boolean false" | debconf-set-selections && echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && dpkg-reconfigure -f noninteractive slapd
+      # ansible.builtin.shell: echo "slapd slapd/no_configuration boolean false" | debconf-set-selections && echo "slapd slapd/domain string {{ ldap_domain }}" | debconf-set-selections && echo "slapd shared/organization string '{{ ldap_organization }}'" | debconf-set-selections && echo "slapd slapd/password1 password {{ slapd_admin_password }}" | debconf-set-selections && echo "slapd slapd/password2 password {{ slapd_admin_password }}" | debconf-set-selections && echo "slapd slapd/purge_database boolean false" | debconf-set-selections && echo "slapd slapd/allow_ldap_v2 boolean false" | debconf-set-selections && echo "slapd slapd/move_old_database boolean true" | debconf-set-selections && dpkg-reconfigure -f noninteractive slapd
+
+    - name: Run slapcat
+      ansible.builtin.shell: slapcat
+      register: slapcat_output
+
+    - name: Validate ldap config
+      ansible.builtin.assert:
+        that: 
+          - slapcat_output.stdout is search(ldap_domain.split('.')[0])
+          - slapcat_output.stdout is search(ldap_domain.split('.')[1])
+          # - slapcat_output.stdout is search(ldap_organization)
+        fail_msg: "LDAP was not configured correctly:  {{ slapcat_output.stdout | default ('NO_STDOUT_AVAILABLE') }}"
+        success_msg: "LDAP Configured Correctly!"
+
+#### OpenLDAP listens to 389 by default
