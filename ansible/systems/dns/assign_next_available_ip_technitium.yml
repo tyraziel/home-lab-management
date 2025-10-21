@@ -25,7 +25,7 @@
     technitium_a_record_overwrite: false
 
     assignable_ip_range_slash_24_network_id: "127.0.0"
-    assignable_ip_range_slash_24_host_id_start: 32
+    assignable_ip_range_slash_24_host_id_start: 15
     assignable_ip_range_slash_24_host_id_end: 100
     assignable_ip_list: []
     taken_ip_list: []
