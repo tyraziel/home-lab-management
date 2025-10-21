@@ -105,8 +105,3 @@
         state: started
         delay: 0
         timeout: 120
-
-#
-# https://www.deployhq.com/blog/simplifying-authentication-a-comprehensive-guide-to-installing-keycloak-on-a-vps
-#
-# https://www.keycloak.org/server/bootstrap-admin-recovery
