@@ -25,9 +25,6 @@
 #       ansible.builtin.pip:
 #         name: ansible-core proxmoxer requests python-ldap
 
-# ansible-galaxy collection install community.general
-# ansible-galaxy collection install community.crypto
-# ansible-galaxy collection install community.proxmox
     - name: Install required ansible-galaxy collections (community.crypto)
       community.general.ansible_galaxy_install:
         type: collection
@@ -43,7 +40,6 @@
         type: collection
         name: community.proxmox
 
-# mkdir ~/home-lab
     - name: Create directory for home-lab-management git repository content to live
       ansible.builtin.file:
         path: /home/user-one/home-lab/home-lab-management
@@ -52,8 +48,6 @@
         group: user-one
         mode: '0755'
 
-# cd ~/home-lab
-# git clone https://github.com/tyraziel/home-lab-management.git
     - name: Clone https://github.com/tyraziel/home-lab-management.git to /home/user-one/home-lab
       ansible.builtin.git:
         repo: 'https://github.com/tyraziel/home-lab-management.git'
@@ -84,20 +78,11 @@
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) test" | sudo tee -a /etc/apt/sources.list.d/hashicorp.list
         creates: /etc/apt/sources.list.d/hashicorp.list
 
-# sudo apt update
-# sudo apt-get install terraform
     - name: Install terraform
       ansible.builtin.apt:
         name: terraform
         update_cache: true
         state: present
-
-#download fzf
-
-#https://github.com/junegunn/fzf/releases/download/v$version/${1}
-#chmod +x fzf 
-#sudo mv fzf /usr/bin/fzf
-#fzf --version
 
     - name: Create directory for fzf download to live
       ansible.builtin.file:
