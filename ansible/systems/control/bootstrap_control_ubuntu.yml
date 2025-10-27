@@ -1,0 +1,158 @@
+---
+- name: Bootstrap Control Server (aka where the rest of the automation runs from)
+  hosts: all
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Install required packages
+      ansible.builtin.apt:
+        name: git, python3.12-venv, python3.12-dev, python3-pip, python3-full, gcc, libldap2-dev, libsasl2-dev, mkcert, gnupg, software-properties-common, python3-proxmoxer, python3-requests, python3-ldap, ansible-core, sshpass
+        update_cache: true
+        state: present
+
+### Let's not do the venv here, yet, keeping for sake of argument that at some point we probably should have a venv?
+# python -m venv ~/.venv-ansible-core-homelab
+# source ~/.venv-ansible-core-homelab/bin/activate
+
+# # pip install --upgrade pip
+#     - name: Upgrade pip
+#       ansible.builtin.pip:
+#         name: pip
+
+# # pip install ansible-core proxmoxer requests python-ldap
+#     - name: Install required pip modules
+#       ansible.builtin.pip:
+#         name: ansible-core proxmoxer requests python-ldap
+
+# ansible-galaxy collection install community.general
+# ansible-galaxy collection install community.crypto
+# ansible-galaxy collection install community.proxmox
+    - name: Install required ansible-galaxy collections (community.crypto)
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.general
+
+    - name: Install required ansible-galaxy collections (community.crypto)
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.crypto
+
+    - name: Install required ansible-galaxy collections (community.proxmox)
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.proxmox
+
+# mkdir ~/home-lab
+    - name: Create directory for home-lab-management git repository content to live
+      ansible.builtin.file:
+        path: /home/user-one/home-lab/home-lab-management
+        state: directory
+        owner: user-one
+        group: user-one
+        mode: '0755'
+
+# cd ~/home-lab
+# git clone https://github.com/tyraziel/home-lab-management.git
+    - name: Clone https://github.com/tyraziel/home-lab-management.git to /home/user-one/home-lab
+      ansible.builtin.git:
+        repo: 'https://github.com/tyraziel/home-lab-management.git'
+        dest: /home/user-one/home-lab/home-lab-management/
+        force: true
+
+    - name: Fix ownership
+      ansible.builtin.file:
+        path: /home/user-one/home-lab/home-lab-management
+        state: directory
+        owner: user-one
+        group: user-one
+        recurse: true
+
+    - name: Get GPG Key for hashicorp
+      ansible.builtin.command: 
+        cmd: wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor | sudo tee /usr/share/keyrings/hashicorp-archive-keyring.gpg > /dev/null
+        creates: /usr/share/keyrings/hashicorp-archive-keyring.gpg
+
+    - name: Add hashicorp GPG Key to keyring
+      ansible.builtin.command: 
+        cmd: gpg --no-default-keyring --keyring /usr/share/keyrings/hashicorp-archive-keyring.gpg --fingerprint
+
+    - name: Create apt repo file for hashicorp (main, test)
+      ansible.builtin.command: 
+        cmd: |
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(grep -oP '(?<=UBUNTU_CODENAME=).*' /etc/os-release || lsb_release -cs) test" | sudo tee -a /etc/apt/sources.list.d/hashicorp.list
+        creates: /etc/apt/sources.list.d/hashicorp.list
+
+# sudo apt update
+# sudo apt-get install terraform
+    - name: Install terraform
+      ansible.builtin.apt:
+        name: terraform
+        update_cache: true
+        state: present
+
+#download fzf
+
+#https://github.com/junegunn/fzf/releases/download/v$version/${1}
+#chmod +x fzf 
+#sudo mv fzf /usr/bin/fzf
+#fzf --version
+
+    - name: Create directory for fzf download to live
+      ansible.builtin.file:
+        path: /home/user-one/local-bin/fzf
+        state: directory
+        owner: user-one
+        group: user-one
+        mode: '0755'
+        recurse: true
+
+    - name: Get the technitium installer script
+      ansible.builtin.get_url:
+        url: https://github.com/junegunn/fzf/releases/download/v0.66.1/fzf-0.66.1-linux_amd64.tar.gz
+        dest: /home/user-one/local-bin/fzf/fzf.tar.gz
+        mode: 0755
+        owner: user-one
+        group: user-one
+
+    - name:
+      ansible.builtin.unarchive:
+        src: /home/user-one/local-bin/fzf/fzf.tar.gz
+        dest: /home/user-one/local-bin/fzf/
+        owner: user-one
+        group: user-one
+        remote_src: true
+
+    - name:
+      ansible.builtin.blockinfile:
+        path: /home/user-one/.bashrc
+        block: |
+          # Enable fzf for Control+R
+          eval "$(fzf --bash)"
+
+          # History Fixes
+          # I want to append history, not overwrite it
+          shopt -s histappend
+
+          # I want to ensure that every command is appended to the history file
+          if [[ ! "$PROMPT_COMMAND" =~ "history -a" ]]; then
+                  if [[ ! "$PROMPT_COMMAND" -eq "" ]]; then
+                          PROMPT_COMMAND="$PROMPT_COMMAND; history -a"
+                  else
+                          PROMPT_COMMAND="history -a"
+                  fi
+          fi
+
+          # I want timestamps with my history (might already be set elsewhere)
+          # HISTTIMEFORMAT='%F %T '
+
+          # I want larger history limits
+          HISTSIZE=20000
+          HISTFILESIZE=100000
+
+          # Bind Ctrl+X Ctrl+H to reload history from all terminals
+          bind -x '"\C-x\C-h": "history -a; history -r; echo 🔄 History Reloaded"'
+
+        insertafter: EOF
+        marker: "# {mark} ANSIBLE MANAGED BLOCK FOR FZF"
