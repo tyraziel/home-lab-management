@@ -55,6 +55,11 @@
       ansible.builtin.command: netplan apply
       changed_when: true
 
+    - name: Remove cloud-init network file to eliminate duplicate IPs
+      ansible.builtin.file:
+        path: /etc/netplan/50-cloud-init.yaml
+        state: absent
+
     - name: Reboot Guest VM
       ansible.builtin.reboot:
         msg: "Hostname and network changes completed, rebooting"
