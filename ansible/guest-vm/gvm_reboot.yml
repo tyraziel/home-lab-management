@@ -1,0 +1,10 @@
+---
+- name: Reboot Guest VMs
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Reboot Guest VM 
+      ansible.builtin.reboot:
+        msg: "Ansible requested a reboot..."
