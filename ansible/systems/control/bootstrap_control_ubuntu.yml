@@ -7,9 +7,11 @@
   tasks:
     - name: Install required packages
       ansible.builtin.apt:
-        name: git, python3.12-venv, python3.12-dev, python3-pip, python3-full, gcc, libldap2-dev, libsasl2-dev, mkcert, gnupg, software-properties-common, python3-proxmoxer, python3-requests, python3-ldap, ansible-core, sshpass
+        name: git, python3.12-venv, python3.12-dev, python3-pip, python3-full, gcc, libldap2-dev, libsasl2-dev, mkcert, gnupg, software-properties-common, python3-proxmoxer, python3-requests, python3-ldap, python3-psycopg2, ansible-core, sshpass
         update_cache: true
         state: present
+
+#python3-ipaddress, might be problematic
 
 ### Let's not do the venv here, yet, keeping for sake of argument that at some point we probably should have a venv?
 # python -m venv ~/.venv-ansible-core-homelab
@@ -20,10 +22,10 @@
 #       ansible.builtin.pip:
 #         name: pip
 
-# # pip install ansible-core proxmoxer requests python-ldap
-#     - name: Install required pip modules
-#       ansible.builtin.pip:
-#         name: ansible-core proxmoxer requests python-ldap
+    - name: Install required pip modules
+      ansible.builtin.pip:
+        name: ipaddress
+        break_system_packages: true
 
     - name: Install required ansible-galaxy collections (community.crypto)
       community.general.ansible_galaxy_install:
@@ -39,6 +41,11 @@
       community.general.ansible_galaxy_install:
         type: collection
         name: community.proxmox
+
+    - name: Install required ansible-galaxy collections (community.postgresql)
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: community.postgresql
 
     - name: Create directory for home-lab-management git repository content to live
       ansible.builtin.file:
