@@ -4,28 +4,28 @@
   gather_facts: false
 
   vars:
-    proxmox_cluster_host: "proxmox-cluster-host"
+    # proxmox_cluster_host: "proxmox-cluster-host"
     proxmox_target_node: "proxmox-node"
     vm_guests_to_remove: ["vm-test-001", "vm-test-002"]
 
-  vars_prompt:
-    - name: proxmox_api_user
-      prompt: "Proxmox API User"
-      default: "root@pam"
-      private: false
+  # vars_prompt:
+  #   - name: proxmox_api_user
+  #     prompt: "Proxmox API User"
+  #     default: "root@pam"
+  #     private: false
 
-    - name: proxmox_api_secret
-      prompt: "Proxmox API Secret"
-      unsafe: true
-      private: true
-      confirm: true
+  #   - name: proxmox_api_secret
+  #     prompt: "Proxmox API Secret"
+  #     unsafe: true
+  #     private: true
+  #     confirm: true
 
   tasks:
     - name: Stop the VM(s)
       community.general.proxmox_kvm:
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_secret }}"
-        api_host: "{{ proxmox_cluster_host }}"
+        # api_user: "{{ proxmox_api_user }}"
+        # api_password: "{{ proxmox_api_secret }}"
+        # api_host: "{{ proxmox_cluster_host }}"
         node: "{{ proxmox_target_node }}"
         name: "{{ item }}"
         state: "stopped"
@@ -46,9 +46,9 @@
 
     - name: Async Remove VM(s)
       community.general.proxmox_kvm:
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_secret }}"
-        api_host: "{{ proxmox_cluster_host }}"
+        # api_user: "{{ proxmox_api_user }}"
+        # api_password: "{{ proxmox_api_secret }}"
+        # api_host: "{{ proxmox_cluster_host }}"
         node: "{{ proxmox_target_node }}"
         name: "{{ item }}"
         state: "absent"

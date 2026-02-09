@@ -4,27 +4,27 @@
   gather_facts: false
 
   vars:
-    proxmox_cluster_host: "proxmox-cluster-host"
+    # proxmox_cluster_host: "proxmox-cluster-host"
     nodes_to_stop: ["proxmox-node2", "proxmox-node1"]
 
-  vars_prompt:
-    - name: proxmox_api_user
-      prompt: "Proxmox API User"
-      default: "root@pam"
-      private: false
+  # vars_prompt:
+  #   - name: proxmox_api_user
+  #     prompt: "Proxmox API User"
+  #     default: "root@pam"
+  #     private: false
 
-    - name: proxmox_api_secret
-      prompt: "Proxmox API Secret"
-      unsafe: true
-      private: true
-      confirm: true
+  #   - name: proxmox_api_secret
+  #     prompt: "Proxmox API Secret"
+  #     unsafe: true
+  #     private: true
+  #     confirm: true
 
   tasks:
     - name: Stop a Proxmox VE Node
       community.proxmox.proxmox_node:
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_secret }}"
-        api_host: "{{ proxmox_cluster_host }}"
+        # api_user: "{{ proxmox_api_user }}"
+        # api_password: "{{ proxmox_api_secret }}"
+        # api_host: "{{ proxmox_cluster_host }}"
         node_name: "{{ item }}"
         power_state: offline
       with_items: "{{ nodes_to_stop }}"

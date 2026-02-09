@@ -1,12 +1,13 @@
 ---
-- name: Proxmox Stop VM(s)
+- name: Proxmox Remove Snapshot VM(s)
   hosts: localhost
   gather_facts: false
 
   vars:
     # proxmox_cluster_host: "proxmox-cluster-host"
-    # proxmox_target_node: "proxmox-node"
-    vm_guests_to_stop: ["vm-test-001", "vm-test-002"]
+    proxmox_target_node: "proxmox-node"
+    vm_guests_to_remove_snapshot: ["vm-test-001", "vm-test-002"]
+    snapshot: "SNAPSHOT_TESTING"
 
   # vars_prompt:
   #   - name: proxmox_api_user
@@ -21,25 +22,25 @@
   #     confirm: true
 
   tasks:
-    - name: Stop the VM(s)
-      community.general.proxmox_kvm:
+    - name: Remove Snapshot on the VM(s) with '{{ snapshot }}'
+      community.general.proxmox_snap:
         # api_user: "{{ proxmox_api_user }}"
         # api_password: "{{ proxmox_api_secret }}"
         # api_host: "{{ proxmox_cluster_host }}"
-        # node: "{{ proxmox_target_node }}"
-        name: "{{ item }}"
-        state: "stopped"
+        hostname: "{{ item }}"
+        snapname: "{{ snapshot }}"
+        state: "absent"
         timeout: 600
-      with_items: "{{ vm_guests_to_stop }}"
-      register: stop_vm_results
+      with_items: "{{ vm_guests_to_remove_snapshot }}"
+      register: snapshot_remove_vm_results
       async: 600
       poll: 0
 
-    - name: Wait for all VM(s) to stop
+    - name: Wait for all VM(s) to have the snapshot removed
       ansible.builtin.async_status:
         jid: "{{ item.ansible_job_id }}"
-      register: vm_stop_job_result
-      until: vm_stop_job_result.finished
+      register: vm_snapshot_remove_job_result
+      until: vm_snapshot_remove_job_result.finished
       retries: 300
       delay: 5
-      with_items: "{{ stop_vm_results.results }}"
+      with_items: "{{ snapshot_remove_vm_results.results }}"

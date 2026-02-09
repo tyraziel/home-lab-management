@@ -4,31 +4,31 @@
   gather_facts: false
 
   vars:
-    proxmox_cluster_host: "proxmox-cluster-host"
+    # proxmox_cluster_host: "proxmox-cluster-host"
     proxmox_target_node: "proxmox-target-node"
     proxmox_node_storage: "proxmox-node-storage"
 
     vm_guests_to_create: [{hostname: "vm-test-001", vmid: 800}, {hostname: "vm-test-002", vmid: 801}]
     template: "image-base"
 
-  vars_prompt:
-    - name: proxmox_api_user
-      prompt: "Proxmox API User"
-      default: "root@pam"
-      private: false
+  # vars_prompt:
+  #   - name: proxmox_api_user
+  #     prompt: "Proxmox API User"
+  #     default: "root@pam"
+  #     private: false
 
-    - name: proxmox_api_secret
-      prompt: "Proxmox API Secret"
-      unsafe: true
-      private: true
-      confirm: true
+  #   - name: proxmox_api_secret
+  #     prompt: "Proxmox API Secret"
+  #     unsafe: true
+  #     private: true
+  #     confirm: true
 
   tasks:
     - name: Async Create VM(s)
       community.general.proxmox_kvm:
-        api_user: "{{ proxmox_api_user }}"
-        api_password: "{{ proxmox_api_secret }}"
-        api_host: "{{ proxmox_cluster_host }}"
+        # api_user: "{{ proxmox_api_user }}"
+        # api_password: "{{ proxmox_api_secret }}"
+        # api_host: "{{ proxmox_cluster_host }}"
         node: "{{ proxmox_target_node }}"
         clone: "{{ template }}"
         full: true
