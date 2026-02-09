@@ -63,3 +63,4 @@
     - name: Reboot Guest VM
       ansible.builtin.reboot:
         msg: "Hostname and network changes completed, rebooting"
+        reboot_timeout: 5

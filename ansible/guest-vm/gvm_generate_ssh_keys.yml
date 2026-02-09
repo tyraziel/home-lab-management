@@ -43,12 +43,14 @@
   vars:
     user: root
     apply_private_key: true
+    cleanup_existing_authorized_keys: true
 
   tasks:
   - name: Set authorized keys for host
     ansible.posix.authorized_key:
       user: "{{ user }}"
       state: present
+      exclusive: "{{ cleanup_existing_authorized_keys }}"
       key: "{{ hostvars['for_the_key']['the_public_key'] }}"
 
   - name: Copy private key to host
