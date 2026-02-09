@@ -6,6 +6,7 @@
   vars:
     technitium_api_host: "127.0.0.1"
     technitium_api_port: "5380"
+    technitium_api_protcol: "http"
     technitium_user: "admin"
     technitium_default_password: "admin"
     zone_to_create: "localdomain.local"
@@ -23,8 +24,9 @@
   tasks:
     - name: Login with defaults for {{ technitium_user }} to get a token
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_default_password }}&includeInfo=true"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_default_password }}&includeInfo=true"
       register: technitium_login_results
+      no_log: true
 
     - name: Validate Login
       ansible.builtin.assert:
@@ -34,7 +36,7 @@
 
     - name: "Change {{ technitium_user }}'s password"
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/changePassword?token={{ technitium_login_results.json.token }}&pass={{ technitium_admin_password }}"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/changePassword?token={{ technitium_login_results.json.token }}&pass={{ technitium_admin_password }}"
       register: technitium_change_password_results
 
     - name: Validate Password Change
@@ -45,7 +47,7 @@
 
     - name: "Logout user {{ technitium_user }}"
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/logout?token={{ technitium_login_results.json.token }}"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/logout?token={{ technitium_login_results.json.token }}"
       register: technitium_logout_results
 
     - name: Validate Logout for {{ technitium_user }}
@@ -56,7 +58,7 @@
 
     - name: Login with new credentials for {{ technitium_user }}
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_admin_password }}&includeInfo=true"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/user/login?user={{ technitium_user }}&pass={{ technitium_admin_password }}&includeInfo=true"
       register: technitium_relogin_results
 
     - name: Validate Login
@@ -67,7 +69,7 @@
 
     - name: "Create Zone {{ zone_to_create }}"
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/create?token={{ technitium_relogin_results.json.token }}&zone={{ zone_to_create }}&type=Primary"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/create?token={{ technitium_relogin_results.json.token }}&zone={{ zone_to_create }}&type=Primary"
       register: technitium_zone_creation_results
 
     - name: Output Zone Creation
@@ -82,7 +84,7 @@
 
     - name: "Create 'A' Record '{{ technitium_a_record_hostname }}' -> '{{ technitium_a_record_ip }}' (with reverse record PTR and reverse zone for reverse record) in {{ zone_to_create }}"
       ansible.builtin.uri:
-        url: "http://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/records/add?token={{ technitium_relogin_results.json.token }}&zone={{ zone_to_create }}&domain={{ technitium_a_record_hostname }}.{{ zone_to_create}}&ipAddress={{ technitium_a_record_ip }}&type=A&comments=Homelab%20Technitium%20DNS%20Server&ptr=true&createPtrZone=true"
+        url: "{{ technitium_api_protcol }}://{{ technitium_api_host }}:{{ technitium_api_port }}/api/zones/records/add?token={{ technitium_relogin_results.json.token }}&zone={{ zone_to_create }}&domain={{ technitium_a_record_hostname }}.{{ zone_to_create}}&ipAddress={{ technitium_a_record_ip }}&type=A&comments=Homelab%20Technitium%20DNS%20Server&ptr=true&createPtrZone=true"
       register: technitium_a_record_creation_results
 
     - name: Output 'A' Record Creation
