@@ -100,7 +100,7 @@
         mode: '0755'
         recurse: true
 
-    - name: Get the technitium installer script
+    - name: Get the fzf tarball
       ansible.builtin.get_url:
         url: https://github.com/junegunn/fzf/releases/download/v0.66.1/fzf-0.66.1-linux_amd64.tar.gz
         dest: /home/user-one/local-bin/fzf/fzf.tar.gz
@@ -115,6 +115,8 @@
         owner: user-one
         group: user-one
         remote_src: true
+
+    # Move fzf to /usr/bin
 
     - name:
       ansible.builtin.blockinfile:
